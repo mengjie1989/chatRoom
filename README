@@ -1,0 +1,20 @@
+The idea is users can join chat room, and send / receive messages from each other.
+
+Each user is a process.
+There's a chat daemon process.
+
+User process first registers himself/herself. Then he can do:
+Create a room.
+Join a room. (can only join one room)
+Exit a room.
+Send message.
+Receive message.
+Get room list.
+Get list of users in same room.
+Deregister and exit.
+Each action will send a request to daemon process, and wait for its response.
+
+Chat daemon will process those requests parallelly, in n threads. It can reject the client's request if not reasonable (join a room that doesn't exist).
+
+IPC (inter-process communication should be done through sockets).
+
