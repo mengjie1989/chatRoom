@@ -1,5 +1,6 @@
 *.class
 *.iml
+sample.java
 
 out/*
 .idea/*
