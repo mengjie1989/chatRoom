@@ -2,15 +2,11 @@ package ChatDaemon;
 
 import java.io.IOException;
 import java.net.Socket;
-import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.nio.charset.Charset;
 import java.util.*;
-import java.net.ServerSocket;
+import java.util.concurrent.Semaphore;
 
-import SocketUtilities.MyClientSocket;
 import SocketUtilities.MyServerSocket;
 import SocketUtilities.Utilities;
 
@@ -26,6 +22,8 @@ public class ChatDaemon extends Thread {
     private HashMap<Integer, User> mUserMap = new HashMap<Integer, User>();
     private HashSet<Socket> mClientSockets = new HashSet<Socket>();
     private MyServerSocket mDaemonSocket;
+    SyncQueue<Request> mRequestQueue = new SyncQueue<Request>();
+    private Semaphore mRequestSemaphore = new Semaphore(0, false);
 
     ChatDaemon(int serverNum) {
         this.serverNum = serverNum;
@@ -56,22 +54,23 @@ public class ChatDaemon extends Thread {
                 key = mDaemonSocket.acceptSocketChannel();
                 if(key != null) {
                     System.out.println("Accepted a new channel connection.");
-//                        SocketChannel channel = (SocketChannel)key.channel();
-//                        socketChannels.add(channel);
-//                        writeAccpetAck(channel);
                 }
 
                 ArrayList<SelectionKey> keys = mDaemonSocket.getPendingRequests();
                 if (keys != null) {
                     for (SelectionKey theKey : keys) {
                         SocketChannel channel = (SocketChannel)theKey.channel();
-                        String request = Utilities.readFromChannel(channel, 1000);
-                        ServerThread threadToProcess = chooseServerThread();
-                        if (request == null) {
-                            threadToProcess.addRequest(new Request("connection_down", theKey));
+                        String requestStr = Utilities.readFromChannel(channel, 1000);
+                        if (requestStr == null) {
+                            mRequestQueue.add(new Request("connection_down", theKey));
                             channel.close();
+                            mRequestSemaphore.release();
                         } else {
-                            threadToProcess.addRequest(new Request(request, theKey));
+                            String[] requests = requestStr.split("///");
+                            for (String request : requests) {
+                                mRequestQueue.add(new Request(request, theKey));
+                            }
+                            mRequestSemaphore.release(requests.length);
                         }
                     }
                 }
@@ -80,31 +79,7 @@ public class ChatDaemon extends Thread {
         } catch (Exception e) {
             System.out.println(e);
             System.out.println("Error when running");
-//            if (mDaemonSocket != null) {
-//                mDaemonSocket.close();
-//            }
         }
-    }
-
-    // Find server thread with minimum unfinished requests in queue.
-    private ServerThread chooseServerThread () {
-        int min = Integer.MAX_VALUE;
-        ServerThread retval = null;
-
-        for (int i=0; i<serverNum; i++) {
-            ServerThread curThread = mServerPool.get(i);
-            int requestNum = curThread.getRequestQueueSize();
-            if (requestNum == 0) {
-                return curThread;
-            } else {
-                if (requestNum < min) {
-                    min = requestNum;
-                    retval = curThread;
-                }
-            }
-        }
-
-        return retval;
     }
 
     public static void main(String[] args) {
@@ -304,27 +279,47 @@ public class ChatDaemon extends Thread {
         key.attach(null);
     }
 
+    private void getRoomInfo(SelectionKey key) {
+        User user = (User) key.attachment();
+        SocketChannel channel = (SocketChannel) key.channel();
+
+        if (user == null) {
+            sendErrorResponse(channel, "You haven't registered.");
+            return;
+        }
+
+        Room room = user.getRoom();
+
+        if (room == null) {
+            sendErrorResponse(channel, "Please enter a room first.");
+            return;
+        }
+
+        String roomInfo = room.getUserInfo();
+
+        sendSuccessResponse(channel, roomInfo);
+
+    }
+
     class ServerThread extends Thread {
-        SyncQueue<Request> requestQueue = new SyncQueue<Request>();
-
-        public int getRequestQueueSize() {
-            return requestQueue.getSize();
-        }
-
-        public void addRequest(Request request) {
-            requestQueue.add(request);
-        }
-
         private Request getRequest() {
-            return requestQueue.poll();
+            return mRequestQueue.poll();
         }
 
         @Override
         public void run () {
             while (true ) {
-                Request request = getRequest();
-                if (request != null) {
-                    processRequest(request);
+                try {
+                    mRequestSemaphore.acquire();
+                    Request request = getRequest();
+                    if (request == null) {
+                        System.out.println("Failed to fetch request!");
+                    } else {
+                        processRequest(request);
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    break;
                 }
             }
         }
@@ -355,6 +350,9 @@ public class ChatDaemon extends Thread {
                         break;
                     case CONNECTION_DOWN:
                         closeConnection(key);
+                        break;
+                    case GET_ROOMINFO:
+                        getRoomInfo(key);
                         break;
                     default:
                     case SEND_MESSAGE:

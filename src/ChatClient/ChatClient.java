@@ -22,8 +22,7 @@ import java.util.ArrayList;
 public class ChatClient extends Thread {
     public static int portNumber = 8888;
     private MyClientSocket mClientSocket = null;
-    private SocketChannel channel = null;
-    listenThread mListenThread = null;
+    private listenThread mListenThread = null;
 
     @Override
     public void run () {
@@ -41,25 +40,19 @@ public class ChatClient extends Thread {
             try {
                 String str = getUserInput();
                 if (str != null && str.length() != 0) {
-                    mClientSocket.write(str);
+                    mClientSocket.write(str+"///");
                 }
             } catch (IOException e) {
                 System.out.println("Error when writing. " + e);
             }
         }
-
-//        try {
-//            mClientSocket.close();
-//        } catch (IOException e) {
-//            System.out.println("Error when closing. " + e);
-//        }
     }
 
     private String getUserInput() {
 
         String input = System.console().readLine();
 
-        if ("q".equals(input)) {
+        if ("q;;;".equals(input)) {
             System.out.println("Exit!");
             System.exit(0);
         }
@@ -72,8 +65,13 @@ public class ChatClient extends Thread {
         public void run () {
             while (true) {
                 try {
+                    mClientSocket.waitToRead();
                     String str = mClientSocket.read(1000);
-                    if (str != null && str.length() != 0 && !str.equals("Success: Silent")) {
+                    if (str == null) {
+                        System.out.println("Server down.");
+                        System.exit(1);
+                    }
+                    if (!str.equals("Success: Silent")) {
                         System.out.println(str);
                     }
                 } catch (IOException e) {

@@ -17,6 +17,7 @@ public class Request {
         EXIT_ROOM,
         ENTER_ROOM,
         SEND_MESSAGE,
+        GET_ROOMINFO,
         CONNECTION_DOWN
     }
 
@@ -26,6 +27,7 @@ public class Request {
     public String       requestStr;
 
     public Request (String str, SelectionKey key) {
+        System.out.println("Incoming request " + str);
         this.key = key;
         this.requestStr = str;
         parseRequest(str);
@@ -59,6 +61,9 @@ public class Request {
                 break;
             case "connection_down":
                 requestType = RequestType.CONNECTION_DOWN;
+                break;
+            case "get_roominfo":
+                requestType = RequestType.GET_ROOMINFO;
                 break;
             default:
                 requestType = RequestType.SEND_MESSAGE;
