@@ -2,6 +2,7 @@ package SocketUtilitiesTest;
 
 import SocketUtilities.MyClientSocket;
 import SocketUtilities.MyServerSocket;
+import SocketUtilities.Utilities;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -21,7 +22,7 @@ public class MyServerSocketTest extends Thread {
     private ArrayList<SocketChannel> socketChannels = new ArrayList<>();
 
     private void writeAccpetAck(SocketChannel channel) throws IOException {
-        MyClientSocket.writeToChannel("Ack: accepted connection.", channel);
+        Utilities.writeToChannel("Ack: accepted connection.", channel);
     }
     @Override
     public void run () {
@@ -48,13 +49,14 @@ public class MyServerSocketTest extends Thread {
                 if (keys != null) {
                     for (SelectionKey theKey : keys) {
                         SocketChannel channel = (SocketChannel)theKey.channel();
-                        String request = MyClientSocket.readFromChannel(channel, 100);
+                        String request = Utilities.readFromChannel(channel, 1000);
                         if (request == null) {
                             System.out.println("Bytes Read -1. Channel closed.");
+                            channel.close();
                         } else {
                             System.out.println("Got request: " + request);
                             String str = "Ack: " + request;
-                            MyClientSocket.writeToChannel("Ack: " + request, channel);
+                            Utilities.writeToChannel("Ack: " + request, channel);
                         }
                     }
                 }
