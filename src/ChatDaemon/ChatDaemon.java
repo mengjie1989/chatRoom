@@ -34,7 +34,7 @@ public class ChatDaemon extends Thread {
             mDaemonSocket = new MyServerSocket();
             mDaemonSocket.openPort(portNumber);
             for (int i = 0; i < serverNum; i++) {
-                mServerPool.add(new ServerThread());
+                mServerPool.add(new ServerThread(i));
                 mServerPool.get(i).start();
             }
             return true;
@@ -111,7 +111,7 @@ public class ChatDaemon extends Thread {
 
     void sendErrorResponse(SocketChannel channel, String message) {
         try {
-            Utilities.writeToChannel("Error: " + message, channel);
+            Utilities.writeToChannel("Error: " + message + "\n", channel);
         } catch (IOException e) {
             System.out.println(e + "Error: " + message);
         }
@@ -119,7 +119,7 @@ public class ChatDaemon extends Thread {
 
     void sendSuccessResponse(SocketChannel channel, String message) {
         try {
-            Utilities.writeToChannel("Success: " + message, channel);
+            Utilities.writeToChannel("Success: " + message + "\n", channel);
         } catch (IOException e) {
             System.out.println(e + "Success: " + message);
         }
@@ -305,6 +305,8 @@ public class ChatDaemon extends Thread {
         private Request getRequest() {
             return mRequestQueue.poll();
         }
+        int i;
+        ServerThread(int i) { this.i = i; }
 
         @Override
         public void run () {
@@ -325,6 +327,7 @@ public class ChatDaemon extends Thread {
         }
 
         private void processRequest(Request request) {
+            System.out.println("server " + i + " processing.");
             synchronized (request.key) {
                 SelectionKey key = request.key;
                 String payload = request.requestPayload;

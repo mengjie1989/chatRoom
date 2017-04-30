@@ -1,19 +1,8 @@
 package ChatClient;
 
-
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.channels.*;
 
 import SocketUtilities.MyClientSocket;
-import SocketUtilities.MyServerSocket;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
 
 /**
  * Created by refuhoo on 4/25/17.
@@ -48,7 +37,7 @@ public class ChatClient extends Thread {
         }
     }
 
-    private String getUserInput() {
+    protected String getUserInput() {
 
         String input = System.console().readLine();
 

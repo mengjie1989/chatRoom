@@ -78,7 +78,7 @@ public class Room {
                 User user = iterator.next();
                 SocketChannel channel = user.getChannel();
                 try {
-                    Utilities.writeToChannel(message, channel);
+                    Utilities.writeToChannel(message + "\n", channel);
                 } catch (IOException e) {
                     System.out.println("Failed to send message " + message + " to channel " + channel);
                 }
